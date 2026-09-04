@@ -5,7 +5,9 @@ from option_mismatch.prompts import format_mcq
 
 
 def test_prepared_aqua_test_exists():
-    path = Path("data/processed/aqua_test.jsonl")
+    path = Path("data/processed/aqua_test_100.jsonl")
+    if not path.exists():
+        path = Path("data/processed/aqua_test.jsonl")
     assert path.exists(), "run scripts/prepare_data.py first"
     rows = read_jsonl(path, limit=5)
     assert rows
