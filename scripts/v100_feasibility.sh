@@ -10,6 +10,7 @@ export HF_HOME="${HF_HOME:-$WORK/hf_cache}"
 export HUGGINGFACE_HUB_CACHE="${HUGGINGFACE_HUB_CACHE:-$HF_HOME}"
 export TRANSFORMERS_CACHE="${TRANSFORMERS_CACHE:-$HF_HOME}"
 export MODEL_ROOT="${MODEL_ROOT:-$WORK/models}"
+export MODEL_SOURCE="${MODEL_SOURCE:-modelscope}"
 export PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
 mkdir -p "$HF_HOME" "$MODEL_ROOT" "$ROOT/data/processed" "$ROOT/results"
 
