@@ -1,0 +1,41 @@
+{
+  "host": "Tesla V100-PCIE-32GB",
+  "dataset": "AQUA-RAT test, random 100, seed=42",
+  "max_new_tokens": 128,
+  "models": [
+    {
+      "name": "Qwen2.5-0.5B-Instruct",
+      "path": "/root/autodl-tmp/models/Qwen2.5-0.5B-Instruct",
+      "disk": "954M",
+      "layer": 16,
+      "n": 100,
+      "phase2_mean": 0.05398287737742066,
+      "phase2_std": 0.014797655765881294,
+      "phase3_mean": 0.01641147770918906,
+      "phase3_std": 0.02477224595272029,
+      "delta_ndi_drift": 0.03757139966823161,
+      "t_stat": 14.521303009372144,
+      "p_ttest": 1.4264603434947552e-26,
+      "p_wilcoxon": 8.453158325625765e-18,
+      "cohen_d": 1.4521303009372146,
+      "h1_supported": true
+    },
+    {
+      "name": "Qwen2.5-1.5B-Instruct",
+      "path": "/root/autodl-tmp/models/Qwen2.5-1.5B-Instruct",
+      "disk": "2.9G",
+      "layer": 18,
+      "n": 100,
+      "phase2_mean": -0.0006446612889703829,
+      "phase2_std": 0.012479501786119092,
+      "phase3_mean": -0.021188962457235904,
+      "phase3_std": 0.017597044794922273,
+      "delta_ndi_drift": 0.02054430116826552,
+      "t_stat": 10.876514899217213,
+      "p_ttest": 6.762894505226663e-19,
+      "p_wilcoxon": 3.762889813702651e-14,
+      "cohen_d": 1.0876514899217213,
+      "h1_supported": true
+    }
+  ]
+}
