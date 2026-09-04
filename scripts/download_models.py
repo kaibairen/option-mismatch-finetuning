@@ -15,10 +15,9 @@ MODELS = {
 }
 
 
-def download_one(repo_id: str, dest: Path) -> Path:
+def download_via_hf(repo_id: str, dest: Path) -> Path:
     from huggingface_hub import snapshot_download
 
-    dest.mkdir(parents=True, exist_ok=True)
     token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN") or None
     endpoints = []
     current = os.environ.get("HF_ENDPOINT")
@@ -33,17 +32,48 @@ def download_one(repo_id: str, dest: Path) -> Path:
         os.environ["HF_ENDPOINT"] = endpoint
         print(f"[hf] {repo_id} via {endpoint} -> {dest}", flush=True)
         try:
-            path = snapshot_download(
-                repo_id=repo_id,
-                local_dir=str(dest),
-                resume_download=True,
-                token=token,
+            return Path(
+                snapshot_download(
+                    repo_id=repo_id,
+                    local_dir=str(dest),
+                    resume_download=True,
+                    token=token,
+                )
             )
-            return Path(path)
         except Exception as exc:  # noqa: BLE001 - try the next mirror
             last_error = exc
             print(f"[hf] {endpoint} failed: {exc}", file=sys.stderr, flush=True)
-    raise RuntimeError(f"failed to download {repo_id}") from last_error
+    raise RuntimeError(f"huggingface download failed for {repo_id}") from last_error
+
+
+def download_via_modelscope(repo_id: str, dest: Path) -> Path:
+    from modelscope.hub.snapshot_download import snapshot_download
+
+    print(f"[ms] {repo_id} -> {dest}", flush=True)
+    path = snapshot_download(repo_id, local_dir=str(dest))
+    return Path(path)
+
+
+def download_one(repo_id: str, dest: Path) -> Path:
+    dest.mkdir(parents=True, exist_ok=True)
+    marker = dest / "config.json"
+    if marker.exists():
+        print(f"[skip] already present {dest}", flush=True)
+        return dest
+    prefer = (os.environ.get("MODEL_SOURCE") or "auto").lower()
+    errors: list[str] = []
+    order = ("modelscope", "hf") if prefer in {"auto", "modelscope"} else ("hf", "modelscope")
+    if prefer in {"hf", "modelscope"}:
+        order = (prefer,)
+    for source in order:
+        try:
+            if source == "modelscope":
+                return download_via_modelscope(repo_id, dest)
+            return download_via_hf(repo_id, dest)
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{source}: {exc}")
+            print(f"[{source}] failed: {exc}", file=sys.stderr, flush=True)
+    raise RuntimeError(f"failed to download {repo_id}: " + " | ".join(errors))
 
 
 def main() -> int:
