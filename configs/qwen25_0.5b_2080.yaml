@@ -9,17 +9,19 @@ data:
   test_jsonl: data/processed/aqua_test_100.jsonl
   train_jsonl: data/processed/aqua_train_100.jsonl
   num_probe_samples: 100
-  max_new_tokens: 128
+  max_new_tokens: 256
   phase3_token_frac: 0.30
 
 probe:
   seed: 42
   diligence_pairs: 8
-  output_npz: results/real_diligence_vectors.npz
-  output_json: results/h1_probe_report.json
+  holdout_n: 8
+  output_npz: results/Qwen2.5-0.5B-Instruct_stage_a_vectors.npz
+  output_json: reports/Qwen2.5-0.5B-Instruct_stage_a_h1.json
 
 train:
-  output_dir: results/rep_dpo_lora
+  output_dir: results/adapters/rep_dpo_0.5b
+  pref_jsonl: data/processed/aqua_pref_100.jsonl
   lora_r: 16
   lora_alpha: 32
   lora_dropout: 0.05
@@ -28,11 +30,11 @@ train:
   grad_accum: 8
   learning_rate: 1.0e-4
   num_epochs: 1
-  max_train_samples: 256
+  max_train_samples: 100
   beta: 0.1
   rep_lambda: 0.5
-  phase3_target_ndi: 0.1126
+  phase3_target_ndi: 0.054
 
 eval:
-  num_samples: 30
+  num_samples: 100
   output_json: results/eval_mcq.json

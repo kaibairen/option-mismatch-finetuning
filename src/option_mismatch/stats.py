@@ -29,5 +29,7 @@ def paired_drift_tests(phase2: np.ndarray, phase3: np.ndarray) -> dict[str, Any]
         "wilcoxon_stat": float(w_stat),
         "p_wilcoxon": float(p_w),
         "cohen_d": cohen_d,
-        "h1_supported": bool(p_t < 0.005 and p_w < 0.005),
+        "h1_supported": bool(
+            (p_t == p_t and p_w == p_w) and p_t < 0.005 and p_w < 0.005 and cohen_d > 0.3
+        ),
     }

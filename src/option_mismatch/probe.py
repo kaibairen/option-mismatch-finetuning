@@ -74,6 +74,9 @@ def generate_solution(model, tokenizer, prompt: str, max_new_tokens: int) -> str
         **encoded,
         max_new_tokens=max_new_tokens,
         do_sample=False,
+        temperature=1.0,
+        top_p=1.0,
+        top_k=0,
         pad_token_id=tokenizer.pad_token_id,
     )
     gen_ids = out[0, encoded["input_ids"].shape[1] :]
@@ -144,7 +147,27 @@ def main() -> None:
     parser.add_argument("--max-new-tokens", type=int, default=None)
     parser.add_argument("--output-json", default="")
     parser.add_argument("--output-npz", default="")
+    parser.add_argument("--protocol", action="store_true", help="Run Stage A content-split protocol")
     args = parser.parse_args()
+    if args.protocol:
+        from option_mismatch.protocol import run_stage_a
+
+        report = run_stage_a(
+            args.config,
+            {
+                "local_model_dir": args.local_model_dir,
+                "probe_layer": args.probe_layer,
+                "test_jsonl": args.test_jsonl,
+                "num_samples": args.num_samples,
+                "max_new_tokens": args.max_new_tokens,
+                "output_json": args.output_json,
+                "output_npz": args.output_npz,
+            },
+        )
+        print(json_pretty({k: report[k] for k in ("primary_layer", "n_eval", "behavior", "h1_supported", "control_artifact") if k in report}))
+        print(json_pretty(report.get("layers", {}).get(str(report.get("primary_layer")), {})))
+        return
+
     report = run_probe(
         args.config,
         {

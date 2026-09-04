@@ -9,7 +9,7 @@ data:
   test_jsonl: data/processed/aqua_test_100.jsonl
   train_jsonl: data/processed/aqua_train_100.jsonl
   num_probe_samples: 100
-  max_new_tokens: 128
+  max_new_tokens: 256
   phase3_token_frac: 0.30
 
 probe:
