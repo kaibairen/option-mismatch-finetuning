@@ -17,7 +17,8 @@ from option_mismatch.stats import paired_drift_tests
 
 def hidden_at_layer(outputs, layer_1indexed: int) -> torch.Tensor:
     # hidden_states[0] = embedding; hidden_states[i] = block i
-    return outputs.hidden_states[layer_1indexed]
+    states = outputs.hidden_states if hasattr(outputs, "hidden_states") else outputs
+    return states[layer_1indexed]
 
 
 @torch.no_grad()
