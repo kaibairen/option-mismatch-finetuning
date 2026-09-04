@@ -17,13 +17,29 @@ AQUA_RAW = {
 }
 
 
-def load_json_array(url: str) -> list[dict]:
-    with urlopen(url, timeout=120) as resp:
-        payload = resp.read()
-    data = json.loads(payload.decode("utf-8"))
-    if not isinstance(data, list):
-        raise ValueError(f"Expected a JSON array from {url}")
-    return data
+def load_json_records(source: str | Path) -> list[dict]:
+    if str(source).startswith("http"):
+        with urlopen(source, timeout=180) as resp:
+            text = resp.read().decode("utf-8")
+    else:
+        text = Path(source).read_text(encoding="utf-8")
+    text = text.strip()
+    if not text:
+        return []
+    try:
+        data = json.loads(text)
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            return [data]
+    except json.JSONDecodeError:
+        pass
+    rows = []
+    for line in text.splitlines():
+        line = line.strip()
+        if line:
+            rows.append(json.loads(line))
+    return rows
 
 
 def to_record(row: dict) -> dict:
@@ -54,11 +70,11 @@ def main() -> int:
     url = AQUA_RAW[args.split]
     raw_path = raw_dir / f"aqua_{args.split}.json"
     if raw_path.exists() and raw_path.stat().st_size > 0:
-        rows = json.loads(raw_path.read_text(encoding="utf-8"))
+        rows = load_json_records(raw_path)
         print(f"[data] cache hit {raw_path} ({len(rows)} rows)")
     else:
         print(f"[data] downloading {url}")
-        rows = load_json_array(url)
+        rows = load_json_records(url)
         raw_path.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
 
     records = [to_record(row) for row in rows if row.get("question")]
