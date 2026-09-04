@@ -368,3 +368,30 @@ Base / SFT / DPO / Rep-DPO / Rep-GRPO：$\Delta\mathrm{NDI}$、Mismatch、Accura
 1. **切入点锁定**：Phase III 选项匹配段的表征塌缩 + 选项错配。  
 2. **不再扩大模型** 直到 Stage A 对照做完。  
 3. **下一步实现**：内容切分、行为指标、对照实验，然后用已有 100 条 train 做 0.5B Rep-DPO 可行性。
+
+---
+
+## 12. Stage A / B 实测（V100）
+
+完整数字：`reports/stage_a_h1.json`、`reports/stage_b_repair.json`。
+
+**Stage A（内容切分，holdout 8 / eval 92）**
+
+- 0.5B L16：$\Delta\mathrm{NDI}=0.0238$，$d=1.59$，$p=5\times10^{-27}$，H1 成立。随机 $V$ 不支持 H1（$d=-1.19$）。乱序选项仍 $d=1.51$，故 `control_artifact=true`。
+- 1.5B L18：H1 仍立（$d=0.60$），同样是随机 $V$ 通过、乱序选项未减弱。
+- 行为（0.5B）：Accuracy 17.4%，Mismatch 8.7%，Number-match 15.2%。
+
+乱序选项未削弱漂移，说明「结尾急躁」可能不只绑定在正确选项映射上。随机向量对照通过，排除「任意方向都掉」。
+
+**Stage B（0.5B LoRA，AQUA test-100）**
+
+| 方法 | Acc | Mismatch | Number-match | Phase III NDI | $\Delta\mathrm{NDI}$ |
+| --- | --- | --- | --- | --- | --- |
+| Base | 0.16 | 0.10 | 0.15 | 0.027 | +0.024 |
+| SFT | 0.27 | 0.11 | 0.23 | −0.018 | +0.033 |
+| DPO | 0.22 | 0.15 | 0.17 | −0.052 | +0.039 |
+| Rep-DPO | 0.24 | 0.30 | 0.38 | **0.070** | **−0.011** |
+
+- 主成功：**未达到**（Mismatch 升而非降 ≥5pp）。
+- 机制：Rep-DPO 把 Phase III NDI 拉回并**反转** $\Delta\mathrm{NDI}$，Number-match 从 0.15 到 0.38。
+- 解读：表征约束让模型更会算出中间数，但字母对齐没跟上，Mismatch 检测因此更勤。下一步应把字母一致性写进损失，而不是加大 $\lambda_{\mathrm{rep}}$。
