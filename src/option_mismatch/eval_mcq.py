@@ -35,6 +35,8 @@ def evaluate(cfg_path: str, *, adapter: str = "", output_json: str = "", test_js
         v = blob[key] if key in blob.files else None
     details = []
     p2s, p3s = [], []
+    import torch
+
     for row in rows:
         prompt = apply_chat(tokenizer, chat_messages(format_mcq(row["question"], row["options"]), diligent=True))
         text = generate_solution(model, tokenizer, prompt, int(cfg["data"]["max_new_tokens"]))
@@ -42,14 +44,13 @@ def evaluate(cfg_path: str, *, adapter: str = "", output_json: str = "", test_js
         span = phase3_token_start(tokenizer, text, options=list(row["options"]))
         rec = {"correct": row.get("correct"), "generation": text, **beh, "span_rule": span["rule"]}
         if v is not None:
-            import torch
-
             device = next(model.parameters()).device
             full = tokenizer(prompt + text, return_tensors="pt").to(device)
-            out = model(**full, output_hidden_states=True, use_cache=False)
-            h = hidden_at_layer(out, layer)[0].float()
-            h = torch.nn.functional.normalize(h, dim=-1)
-            ndi = torch.matmul(h, torch.tensor(v, device=h.device, dtype=h.dtype)).cpu().numpy()
+            with torch.no_grad():
+                out = model(**full, output_hidden_states=True, use_cache=False)
+                h = hidden_at_layer(out, layer)[0].float()
+                h = torch.nn.functional.normalize(h, dim=-1)
+                ndi = torch.matmul(h, torch.tensor(v, device=h.device, dtype=h.dtype)).detach().cpu().numpy()
             plen = tokenizer(prompt, return_tensors="pt")["input_ids"].shape[1]
             gen_ndi = ndi[max(plen - 1, 0) :]
             p2, p3 = split_ndi(gen_ndi, span["token_start"])
