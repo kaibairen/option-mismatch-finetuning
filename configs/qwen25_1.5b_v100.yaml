@@ -1,0 +1,38 @@
+model_name: Qwen/Qwen2.5-1.5B-Instruct
+local_model_dir: /root/autodl-tmp/models/Qwen2.5-1.5B-Instruct
+probe_layer: 18
+hidden_size: 1536
+num_layers: 28
+
+data:
+  source: deepmind/AQuA
+  test_jsonl: data/processed/aqua_test_100.jsonl
+  train_jsonl: data/processed/aqua_train_100.jsonl
+  num_probe_samples: 100
+  max_new_tokens: 128
+  phase3_token_frac: 0.30
+
+probe:
+  seed: 42
+  diligence_pairs: 8
+  output_npz: results/Qwen2.5-1.5B-Instruct_diligence_vectors.npz
+  output_json: results/Qwen2.5-1.5B-Instruct_h1_probe.json
+
+train:
+  output_dir: results/rep_dpo_lora_1.5b
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  max_length: 768
+  batch_size: 1
+  grad_accum: 8
+  learning_rate: 1.0e-4
+  num_epochs: 1
+  max_train_samples: 100
+  beta: 0.1
+  rep_lambda: 0.5
+  phase3_target_ndi: 0.1126
+
+eval:
+  num_samples: 100
+  output_json: results/eval_mcq_1.5b.json

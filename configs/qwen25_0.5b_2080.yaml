@@ -1,0 +1,38 @@
+model_name: Qwen/Qwen2.5-0.5B-Instruct
+local_model_dir: /root/autodl-tmp/models/Qwen2.5-0.5B-Instruct
+probe_layer: 16  # 1-indexed Transformer block, matches H1 report (Layer 16)
+hidden_size: 896
+num_layers: 24
+
+data:
+  source: deepmind/AQuA
+  test_jsonl: data/processed/aqua_test_100.jsonl
+  train_jsonl: data/processed/aqua_train_100.jsonl
+  num_probe_samples: 100
+  max_new_tokens: 128
+  phase3_token_frac: 0.30
+
+probe:
+  seed: 42
+  diligence_pairs: 8
+  output_npz: results/real_diligence_vectors.npz
+  output_json: results/h1_probe_report.json
+
+train:
+  output_dir: results/rep_dpo_lora
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  max_length: 768
+  batch_size: 1
+  grad_accum: 8
+  learning_rate: 1.0e-4
+  num_epochs: 1
+  max_train_samples: 256
+  beta: 0.1
+  rep_lambda: 0.5
+  phase3_target_ndi: 0.1126
+
+eval:
+  num_samples: 30
+  output_json: results/eval_mcq.json
