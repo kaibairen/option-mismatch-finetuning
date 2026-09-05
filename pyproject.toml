@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "option-mismatch-finetuning"
+version = "0.1.0"
+description = "Phase-III diligence-drift probe and Rep-DPO repair for Qwen2.5-0.5B on AQUA-RAT"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
