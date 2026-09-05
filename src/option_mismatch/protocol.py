@@ -118,7 +118,7 @@ def run_stage_a(cfg_path: str, overrides: dict | None = None) -> dict[str, Any]:
     else:
         task_v = synthetic_v
 
-    out_json = Path(overrides.get("output_json") or "reports/stage_a_h1.json")
+    out_json = Path(overrides.get("output_json") or "reports/stage_a/stage_a_h1.json")
     gen_path = Path(overrides.get("generations_jsonl") or Path("results/generations") / f"{out_json.stem}.jsonl")
     do_shuffle = bool(overrides.get("shuffle_control", True))
     max_new = int(cfg["data"]["max_new_tokens"])

@@ -2,7 +2,7 @@
 # V100 feasibility: download two small Qwen Instruct models and probe 100 AQUA samples each.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
 WORK="${WORK_ROOT:-/root/autodl-tmp}"
@@ -22,12 +22,12 @@ fi
 
 PY="${PYTHON:-python}"
 "$PY" -m pip install -q --upgrade pip
-"$PY" -m pip install -q -r "$ROOT/requirements-v100.txt"
+"$PY" -m pip install -q -r "$ROOT/requirements/v100.txt"
 "$PY" -m pip install -q -e "$ROOT"
 
-"$PY" "$ROOT/scripts/prepare_data.py" --split test --sample 100 --seed 42 --output-name aqua_test_100
-"$PY" "$ROOT/scripts/prepare_data.py" --split train --sample 100 --seed 42 --output-name aqua_train_100
-"$PY" "$ROOT/scripts/download_models.py" --models 0.5b 1.5b --dest-root "$MODEL_ROOT"
+"$PY" "$ROOT/scripts/data/prepare_data.py" --split test --sample 100 --seed 42 --output-name aqua_test_100
+"$PY" "$ROOT/scripts/data/prepare_data.py" --split train --sample 100 --seed 42 --output-name aqua_train_100
+"$PY" "$ROOT/scripts/autodl/download_models.py" --models 0.5b 1.5b --dest-root "$MODEL_ROOT"
 
 run_one() {
   local name="$1"

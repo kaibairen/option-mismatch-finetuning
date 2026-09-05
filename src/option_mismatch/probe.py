@@ -111,7 +111,7 @@ def run_probe(cfg_path: str, overrides: dict | None = None) -> dict:
     layer = int(cfg["probe_layer"])
     rows = read_jsonl(data_cfg["test_jsonl"], limit=int(data_cfg["num_probe_samples"]))
     if not rows:
-        raise FileNotFoundError(f"No probe rows in {data_cfg['test_jsonl']}; run scripts/prepare_data.py")
+        raise FileNotFoundError(f"No probe rows in {data_cfg['test_jsonl']}; run scripts/data/prepare_data.py")
 
     tokenizer = load_tokenizer(model_name)
     model = load_causal_lm(model_name)

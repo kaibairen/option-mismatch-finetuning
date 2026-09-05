@@ -254,7 +254,7 @@ $$
     results/generations/
     results/probes/
     results/adapters/rep_dpo_0.5b/
-    reports/
+    reports/{feasibility,stage_a,stage_b}/
 ```
 
 ---
@@ -373,7 +373,7 @@ Base / SFT / DPO / Rep-DPO / Rep-GRPO：$\Delta\mathrm{NDI}$、Mismatch、Accura
 
 ## 12. Stage A / B 实测（V100）
 
-完整数字：`reports/stage_a_h1.json`、`reports/stage_b_repair.json`。
+完整数字：`reports/stage_a/stage_a_h1.json`、`reports/stage_b/stage_b_repair.json`。
 
 **Stage A（内容切分，holdout 8 / eval 92）**
 

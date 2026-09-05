@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Merge per-model Stage A reports into reports/stage_a_h1.json."""
+"""Merge per-model Stage A reports into reports/stage_a/stage_a_h1.json."""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ from pathlib import Path
 
 
 def main() -> None:
-    root = Path(__file__).resolve().parents[1]
+    root = Path(__file__).resolve().parents[2]
     models = []
-    for path in sorted((root / "reports").glob("*_stage_a_h1.json")):
+    for path in sorted((root / "reports" / "stage_a").glob("*_stage_a_h1.json")):
         if path.name == "stage_a_h1.json":
             continue
         models.append(json.loads(path.read_text(encoding="utf-8")))
@@ -33,7 +33,7 @@ def main() -> None:
             for m in models
         ],
     }
-    out = root / "reports" / "stage_a_h1.json"
+    out = root / "reports" / "stage_a" / "stage_a_h1.json"
     out.write_text(json.dumps(merged, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(merged, ensure_ascii=False, indent=2))
 

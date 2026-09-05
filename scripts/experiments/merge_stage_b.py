@@ -13,7 +13,7 @@ def load_summary(path: Path) -> dict:
 
 
 def main() -> None:
-    root = Path(__file__).resolve().parents[1]
+    root = Path(__file__).resolve().parents[2]
     names = [("base", "eval_base.json"), ("sft", "eval_sft.json"), ("dpo", "eval_dpo.json"), ("rep_dpo", "eval_rep_dpo.json")]
     methods = {}
     for name, filename in names:
@@ -45,7 +45,7 @@ def main() -> None:
         "primary_success": primary,
         "strong_success": strong,
     }
-    out = root / "reports" / "stage_b_repair.json"
+    out = root / "reports" / "stage_b" / "stage_b_repair.json"
     out.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({k: report[k] for k in report if k != "methods"}, indent=2))
     print(json.dumps({k: methods[k] for k in methods}, indent=2))

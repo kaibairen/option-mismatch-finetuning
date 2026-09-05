@@ -8,7 +8,7 @@ def test_prepared_aqua_test_exists():
     path = Path("data/processed/aqua_test_100.jsonl")
     if not path.exists():
         path = Path("data/processed/aqua_test.jsonl")
-    assert path.exists(), "run scripts/prepare_data.py first"
+    assert path.exists(), "run scripts/data/prepare_data.py first"
     rows = read_jsonl(path, limit=5)
     assert rows
     row = rows[0]

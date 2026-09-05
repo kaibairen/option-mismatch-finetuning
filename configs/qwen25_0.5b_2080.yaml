@@ -17,7 +17,7 @@ probe:
   diligence_pairs: 8
   holdout_n: 8
   output_npz: results/Qwen2.5-0.5B-Instruct_stage_a_vectors.npz
-  output_json: reports/Qwen2.5-0.5B-Instruct_stage_a_h1.json
+  output_json: reports/stage_a/Qwen2.5-0.5B-Instruct_stage_a_h1.json
 
 train:
   output_dir: results/adapters/rep_dpo_0.5b

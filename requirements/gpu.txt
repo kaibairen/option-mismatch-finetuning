@@ -1,5 +1,5 @@
-# AutoDL RTX 2080 runtime (image already provides a CUDA torch).
-# Install with: pip install -r requirements.txt
+# AutoDL RTX 2080 / GPU runtime (image already provides a CUDA torch).
+# Install with: pip install -r requirements/gpu.txt
 transformers==4.51.3
 accelerate==1.6.0
 peft==0.15.2

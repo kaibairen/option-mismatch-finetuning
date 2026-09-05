@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Stage A: content-split H1 re-score + controls on AQUA-100 for 0.5B and 1.5B.
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 WORK="${WORK_ROOT:-/root/autodl-tmp}"
 export PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
@@ -24,11 +24,11 @@ run_one() {
     --test-jsonl "$ROOT/data/processed/aqua_test_100.jsonl" \
     --num-samples 100 \
     --max-new-tokens 256 \
-    --output-json "$ROOT/reports/${name}_stage_a_h1.json" \
+    --output-json "$ROOT/reports/stage_a/${name}_stage_a_h1.json" \
     --output-npz "$ROOT/results/${name}_stage_a_vectors.npz"
 }
 
 run_one "Qwen2.5-0.5B-Instruct" 16 "$ROOT/configs/qwen25_0.5b_2080.yaml"
 run_one "Qwen2.5-1.5B-Instruct" 18 "$ROOT/configs/qwen25_1.5b_v100.yaml"
-"$PY" "$ROOT/scripts/merge_stage_a.py"
+"$PY" "$ROOT/scripts/experiments/merge_stage_a.py"
 echo "[stage-a] done"

@@ -59,7 +59,7 @@ def main() -> int:
     parser.add_argument("--sample", type=int, default=0, help="random sample size; 0 keeps all rows")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output-name", default="", help="override jsonl stem, e.g. aqua_test_100")
-    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
     args = parser.parse_args()
 
     raw_dir = args.root / "data" / "raw"

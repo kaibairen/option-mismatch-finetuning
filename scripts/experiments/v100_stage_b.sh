@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Stage B: real preferences + SFT / DPO / Rep-DPO on 0.5B, eval on AQUA test-100.
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 WORK="${WORK_ROOT:-/root/autodl-tmp}"
 export PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
@@ -39,5 +39,5 @@ done
 "$PY" -m option_mismatch.eval_mcq --config "$CFG" --adapter "$ROOT/results/adapters/sft_0.5b" --output-json "$ROOT/results/eval_sft.json"
 "$PY" -m option_mismatch.eval_mcq --config "$CFG" --adapter "$ROOT/results/adapters/dpo_0.5b" --output-json "$ROOT/results/eval_dpo.json"
 "$PY" -m option_mismatch.eval_mcq --config "$CFG" --adapter "$ROOT/results/adapters/rep_dpo_0.5b" --output-json "$ROOT/results/eval_rep_dpo.json"
-"$PY" "$ROOT/scripts/merge_stage_b.py"
+"$PY" "$ROOT/scripts/experiments/merge_stage_b.py"
 echo "[stage-b] done"

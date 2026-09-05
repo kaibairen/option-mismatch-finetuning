@@ -165,7 +165,7 @@ def cmd_status(_: argparse.Namespace) -> int:
             "\nNo RTX 2080 instance is visible through the official Pro API.\n"
             "Create one in the web console: https://www.autodl.com/market/list\n"
             "Filter GPU = RTX 2080 / 2080 Super, image = PyTorch CUDA 11.8+, 1 GPU.\n"
-            "After it is running, re-run: python scripts/autodl_client.py status"
+            "After it is running, re-run: python scripts/autodl/client.py status"
         )
     return 0
 
