@@ -32,6 +32,10 @@ def load_model(model_dir: str, adapter: str):
 def sample_solution(model, tokenizer, prompt: str, max_new_tokens: int) -> str:
     device = next(model.parameters()).device
     encoded = tokenizer(prompt, return_tensors="pt").to(device)
+    model.generation_config.do_sample = True
+    model.generation_config.temperature = 0.7
+    model.generation_config.top_p = 0.9
+    model.generation_config.top_k = 50
     out = model.generate(
         **encoded,
         max_new_tokens=max_new_tokens,

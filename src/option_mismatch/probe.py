@@ -71,6 +71,10 @@ def split_phases(ndi: np.ndarray, phase3_frac: float) -> tuple[float, float]:
 def generate_solution(model, tokenizer, prompt: str, max_new_tokens: int) -> str:
     device = next(model.parameters()).device
     encoded = tokenizer(prompt, return_tensors="pt").to(device)
+    model.generation_config.do_sample = False
+    model.generation_config.temperature = 1.0
+    model.generation_config.top_p = 1.0
+    model.generation_config.top_k = 50
     out = model.generate(
         **encoded,
         max_new_tokens=max_new_tokens,
