@@ -15,10 +15,19 @@ STAGE="${1:-smoke}"
 
 python scripts/data/prepare_data.py --split test --output-name aqua_test
 python scripts/data/prepare_data.py --split dev --output-name aqua_dev
-python scripts/data/prepare_data.py --split train --sample 400 --seed 42 --output-name aqua_train_400
-python scripts/data/prepare_data.py --split dev --sample 60 --seed 42 --output-name aqua_dev_60
-python scripts/data/prepare_data.py --split train --sample 16 --seed 7 --output-name aqua_train_16
-python scripts/data/prepare_data.py --split dev --sample 16 --seed 7 --output-name aqua_dev_16
+python - <<'PY'
+import json
+from pathlib import Path
+rows = [json.loads(line) for line in Path("data/processed/aqua_dev.jsonl").read_text().splitlines() if line.strip()]
+out = Path("data/processed")
+def dump(name, subset):
+    path = out / name
+    path.write_text("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in subset))
+    print(f"[data] sliced {len(subset)} -> {path}")
+dump("aqua_dev_16.jsonl", rows[:16])
+dump("aqua_train_16.jsonl", rows[16:32])
+dump("aqua_dev_60.jsonl", rows[32:92])
+PY
 
 run_eval() {
   local name="$1"
@@ -72,6 +81,16 @@ for name in ("smoke_base", "smoke_sft", "smoke_decord_sft"):
 PY
   exit 0
 fi
+
+if [[ ! -f "$ROOT/data/raw/aqua_train.json" ]]; then
+  curl -L --retry 5 --retry-delay 2 --connect-timeout 20 \
+    -o "$ROOT/data/raw/aqua_train.json" \
+    "https://cdn.jsdelivr.net/gh/google-deepmind/AQuA@master/train.json" \
+    || curl -L --retry 3 --connect-timeout 20 \
+    -o "$ROOT/data/raw/aqua_train.json" \
+    "https://raw.githubusercontent.com/google-deepmind/AQuA/master/train.json"
+fi
+python scripts/data/prepare_data.py --split train --sample 400 --seed 42 --output-name aqua_train_400
 
 run_eval dev_base "$ROOT/data/processed/aqua_dev_60.jsonl" "" 160
 run_train sft "$ROOT/results/adapters/sft_uniform" \
