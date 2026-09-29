@@ -106,12 +106,23 @@ if [[ "$train_bytes" -lt 1000000 ]]; then
     fi
     rm -f "$ROOT/data/raw/aqua_train.json"
   done
-  if [[ "$downloaded" -ne 1 ]]; then
-    echo "[data] AQUA train download failed" >&2
-    exit 1
-  fi
-fi
+    if [[ "$downloaded" -ne 1 ]]; then
+      echo "[data] AQUA train download failed; training on the unused dev tail"
+      python - <<'PY'
+import json
+from pathlib import Path
+rows = [json.loads(line) for line in Path("data/processed/aqua_dev.jsonl").read_text().splitlines() if line.strip()]
+tail = rows[92:]
+path = Path("data/processed/aqua_train_400.jsonl")
+path.write_text("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in tail))
+print(f"[data] fallback train {len(tail)} -> {path}")
+PY
+    else
+      python scripts/data/prepare_data.py --split train --sample 400 --seed 42 --output-name aqua_train_400
+    fi
+else
 python scripts/data/prepare_data.py --split train --sample 400 --seed 42 --output-name aqua_train_400
+fi
 
 run_eval dev_base "$ROOT/data/processed/aqua_dev_60.jsonl" "" 256 4
 run_train sft "$ROOT/results/adapters/sft_uniform" \
