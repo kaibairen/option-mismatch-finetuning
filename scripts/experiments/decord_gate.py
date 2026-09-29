@@ -49,7 +49,9 @@ def main() -> None:
     args = parser.parse_args()
     dev_base = load(Path(args.dev_base))
     choices = decord_choices(dev_base)
-    kind, best_alpha = max(choices, key=lambda item: (choices[item], 0 if item[0] == "decord" else 1, -float(item[1])))
+    # Equal dev scores keep the single-trace rule and the smaller alpha.
+    # Four-sample voting did not beat that rule on the development slice.
+    kind, best_alpha = max(choices, key=lambda item: (choices[item], 1 if item[0] == "decord" else 0, -float(item[1])))
     dev_sft = load(Path(args.dev_decord_sft))
     dev_ft = load(Path(args.dev_decord_ft))
     use_dpo = dev_ft["greedy"]["accuracy"] >= dev_sft["greedy"]["accuracy"]
