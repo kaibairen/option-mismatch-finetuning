@@ -48,6 +48,34 @@ def phase2_prefix(generation: str, options: list[str] | None = None) -> str:
     return generation[:start].rstrip()
 
 
+def commit_letter(letter_logprobs: Mapping[str, float], inferred: str, pred: str, alpha: float) -> str:
+    """Keep the emitted letter unless a Phase II number names an option.
+
+    Rescoring every trace overwrites correct letters with the raw next-token mode.
+    The numeric commitment is allowed to change the letter only when it exists.
+    """
+    inferred = (inferred or "").strip().upper()[:1]
+    pred = (pred or "").strip().upper()[:1]
+    if not inferred:
+        if pred:
+            return pred
+        return select_decord([{"letter_logprobs": letter_logprobs, "inferred_letter": "", "pred": ""}], alpha=0.0)["letter"]
+    return select_decord(
+        [{"letter_logprobs": letter_logprobs, "inferred_letter": inferred, "pred": pred}],
+        alpha=alpha,
+    )["letter"]
+
+
+def majority_letter(letters: list[str]) -> str:
+    counts: dict[str, int] = {}
+    for letter in letters:
+        if letter:
+            counts[letter] = counts.get(letter, 0) + 1
+    if not counts:
+        return ""
+    return max(counts, key=lambda letter: (counts[letter], -ord(letter)))
+
+
 def select_decord(traces: list[dict[str, Any]], *, alpha: float) -> dict[str, Any]:
     """Pick one letter from scored traces. Each trace may carry ``letter_logprobs``."""
     best: dict[str, Any] | None = None

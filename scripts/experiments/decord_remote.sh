@@ -33,7 +33,8 @@ run_eval() {
   local name="$1"
   local jsonl="$2"
   local adapter="${3:-}"
-  local tokens="${4:-160}"
+  local tokens="${4:-256}"
+  local samples="${5:-1}"
   if [[ -f "$OUT/${name}.json" ]]; then
     echo "[skip eval] $name"
     return 0
@@ -43,6 +44,7 @@ run_eval() {
     --adapter "$adapter" \
     --test-jsonl "$jsonl" \
     --max-new-tokens "$tokens" \
+    --decord-samples "$samples" \
     --output-json "$OUT/${name}.json"
 }
 
@@ -82,17 +84,36 @@ PY
   exit 0
 fi
 
-if [[ ! -f "$ROOT/data/raw/aqua_train.json" ]]; then
-  curl -L --retry 5 --retry-delay 2 --connect-timeout 20 \
-    -o "$ROOT/data/raw/aqua_train.json" \
-    "https://cdn.jsdelivr.net/gh/google-deepmind/AQuA@master/train.json" \
-    || curl -L --retry 3 --connect-timeout 20 \
-    -o "$ROOT/data/raw/aqua_train.json" \
-    "https://raw.githubusercontent.com/google-deepmind/AQuA/master/train.json"
+train_bytes=0
+if [[ -f "$ROOT/data/raw/aqua_train.json" ]]; then
+  train_bytes=$(stat -c%s "$ROOT/data/raw/aqua_train.json")
+fi
+if [[ "$train_bytes" -lt 1000000 ]]; then
+  rm -f "$ROOT/data/raw/aqua_train.json"
+  downloaded=0
+  for url in \
+    "https://raw.githubusercontent.com/google-deepmind/AQuA/master/train.json" \
+    "https://ghfast.top/https://raw.githubusercontent.com/google-deepmind/AQuA/master/train.json"
+  do
+    echo "[data] trying $url"
+    if curl -L --retry 2 --connect-timeout 20 --speed-time 30 --speed-limit 20000 \
+      -o "$ROOT/data/raw/aqua_train.json" "$url"; then
+      train_bytes=$(stat -c%s "$ROOT/data/raw/aqua_train.json")
+      if [[ "$train_bytes" -ge 1000000 ]]; then
+        downloaded=1
+        break
+      fi
+    fi
+    rm -f "$ROOT/data/raw/aqua_train.json"
+  done
+  if [[ "$downloaded" -ne 1 ]]; then
+    echo "[data] AQUA train download failed" >&2
+    exit 1
+  fi
 fi
 python scripts/data/prepare_data.py --split train --sample 400 --seed 42 --output-name aqua_train_400
 
-run_eval dev_base "$ROOT/data/processed/aqua_dev_60.jsonl" "" 160
+run_eval dev_base "$ROOT/data/processed/aqua_dev_60.jsonl" "" 256 4
 run_train sft "$ROOT/results/adapters/sft_uniform" \
   --train-jsonl "$ROOT/data/processed/aqua_train_400.jsonl" --epochs 1 --lr 1e-4
 if [[ ! -f "$ROOT/data/processed/aqua_pref_400.jsonl" ]]; then
@@ -116,13 +137,13 @@ run_train decord_dpo "$ROOT/results/adapters/decord_ft" \
   --pref-jsonl "$ROOT/data/processed/aqua_pref_400.jsonl" \
   --epochs 1 --lr 5e-5
 
-run_eval dev_decord_sft "$ROOT/data/processed/aqua_dev_60.jsonl" "$ROOT/results/adapters/decord_sft" 160
-run_eval dev_decord_ft "$ROOT/data/processed/aqua_dev_60.jsonl" "$ROOT/results/adapters/decord_ft" 160
-run_eval test_base "$ROOT/data/processed/aqua_test.jsonl" "" 160
-run_eval test_sft "$ROOT/data/processed/aqua_test.jsonl" "$ROOT/results/adapters/sft_uniform" 160
-run_eval test_dpo "$ROOT/data/processed/aqua_test.jsonl" "$ROOT/results/adapters/dpo_uniform" 160
-run_eval test_decord_sft "$ROOT/data/processed/aqua_test.jsonl" "$ROOT/results/adapters/decord_sft" 160
-run_eval test_decord_ft "$ROOT/data/processed/aqua_test.jsonl" "$ROOT/results/adapters/decord_ft" 160
+run_eval dev_decord_sft "$ROOT/data/processed/aqua_dev_60.jsonl" "$ROOT/results/adapters/decord_sft" 256
+run_eval dev_decord_ft "$ROOT/data/processed/aqua_dev_60.jsonl" "$ROOT/results/adapters/decord_ft" 256
+run_eval test_base "$ROOT/data/processed/aqua_test.jsonl" "" 256 4
+run_eval test_sft "$ROOT/data/processed/aqua_test.jsonl" "$ROOT/results/adapters/sft_uniform" 256
+run_eval test_dpo "$ROOT/data/processed/aqua_test.jsonl" "$ROOT/results/adapters/dpo_uniform" 256
+run_eval test_decord_sft "$ROOT/data/processed/aqua_test.jsonl" "$ROOT/results/adapters/decord_sft" 256
+run_eval test_decord_ft "$ROOT/data/processed/aqua_test.jsonl" "$ROOT/results/adapters/decord_ft" 256
 
 python scripts/experiments/decord_gate.py \
   --dev-base "$OUT/dev_base.json" \

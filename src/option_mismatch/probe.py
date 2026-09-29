@@ -75,9 +75,6 @@ def generate_solution(model, tokenizer, prompt: str, max_new_tokens: int) -> str
         **encoded,
         max_new_tokens=max_new_tokens,
         do_sample=False,
-        temperature=1.0,
-        top_p=1.0,
-        top_k=0,
         pad_token_id=tokenizer.pad_token_id,
     )
     gen_ids = out[0, encoded["input_ids"].shape[1] :]

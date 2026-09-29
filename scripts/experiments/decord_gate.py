@@ -11,10 +11,27 @@ def load(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def accuracy(report: dict, key: str, alpha: str | None = None) -> float:
-    if key == "greedy":
-        return float(report["greedy"]["accuracy"])
-    return float(report["decord"][alpha]["accuracy"])
+def accuracy(report: dict, key: str) -> float:
+    return float(report["greedy"]["accuracy"])
+
+
+def decord_choices(report: dict) -> dict[tuple[str, str], float]:
+    choices = {}
+    for alpha, summary in report.get("decord", {}).items():
+        choices[("decord", alpha)] = float(summary["accuracy"])
+    for alpha, summary in report.get("decord_majority", {}).items():
+        choices[("majority", alpha)] = float(summary["accuracy"])
+    return choices
+
+
+def decord_accuracy(report: dict, kind: str, alpha: str) -> float:
+    block = report["decord"] if kind == "decord" else report["decord_majority"]
+    return float(block[alpha]["accuracy"])
+
+
+def decord_mismatch(report: dict, kind: str, alpha: str) -> float:
+    block = report["decord"] if kind == "decord" else report["decord_majority"]
+    return float(block[alpha]["mismatch_rate"])
 
 
 def main() -> None:
@@ -31,7 +48,8 @@ def main() -> None:
     parser.add_argument("--margin", type=float, default=0.01)
     args = parser.parse_args()
     dev_base = load(Path(args.dev_base))
-    best_alpha = max(dev_base["decord"], key=lambda alpha: (dev_base["decord"][alpha]["accuracy"], -float(alpha)))
+    choices = decord_choices(dev_base)
+    kind, best_alpha = max(choices, key=lambda item: (choices[item], 0 if item[0] == "decord" else 1, -float(item[1])))
     dev_sft = load(Path(args.dev_decord_sft))
     dev_ft = load(Path(args.dev_decord_ft))
     use_dpo = dev_ft["greedy"]["accuracy"] >= dev_sft["greedy"]["accuracy"]
@@ -46,13 +64,14 @@ def main() -> None:
         "base": accuracy(test_base, "greedy"),
         "sft": accuracy(test_sft, "greedy"),
         "dpo": accuracy(test_dpo, "greedy"),
-        "decord": accuracy(test_base, "decord", best_alpha),
+        "decord": decord_accuracy(test_base, kind, best_alpha),
         "decord_ft": accuracy(ft_report, "greedy"),
     }
     comparisons = [scores["base"], scores["sft"], scores["dpo"]]
     bar = max(comparisons) + args.margin
     payload = {
         "alpha": best_alpha,
+        "decord_kind": kind,
         "fine_tuned_variant": ft_name,
         "margin": args.margin,
         "test_accuracy": scores,
@@ -64,7 +83,7 @@ def main() -> None:
             "base": test_base["greedy"]["mismatch_rate"],
             "sft": test_sft["greedy"]["mismatch_rate"],
             "dpo": test_dpo["greedy"]["mismatch_rate"],
-            "decord": test_base["decord"][best_alpha]["mismatch_rate"],
+            "decord": decord_mismatch(test_base, kind, best_alpha),
             "decord_ft": ft_report["greedy"]["mismatch_rate"],
         },
     }

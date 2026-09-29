@@ -1,4 +1,4 @@
-from option_mismatch.decord import argmax_letter, blend_letter_scores, phase2_prefix, select_decord
+from option_mismatch.decord import argmax_letter, blend_letter_scores, commit_letter, majority_letter, phase2_prefix, select_decord
 from option_mismatch.losses import completion_token_mask, dpo_loss, letter_margin_loss
 
 
@@ -20,6 +20,14 @@ def test_select_decord_uses_highest_blended_trace():
     ]
     chosen = select_decord(traces, alpha=1.0)
     assert chosen["letter"] == "B"
+
+
+def test_commit_keeps_emitted_letter_when_no_number_is_inferred():
+    assert commit_letter({"A": -0.1, "B": -2.0}, "", "B", 4.0) == "B"
+
+
+def test_majority_letter_breaks_ties_by_letter_order():
+    assert majority_letter(["C", "A", "A", "C"]) == "A"
 
 
 def test_phase2_prefix_stops_at_final_answer():
