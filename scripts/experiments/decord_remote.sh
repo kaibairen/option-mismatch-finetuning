@@ -96,7 +96,7 @@ if [[ "$train_bytes" -lt 1000000 ]]; then
     "https://ghfast.top/https://raw.githubusercontent.com/google-deepmind/AQuA/master/train.json"
   do
     echo "[data] trying $url"
-    if curl -L --retry 2 --connect-timeout 20 --speed-time 30 --speed-limit 20000 \
+    if curl -L --retry 2 --connect-timeout 20 --speed-time 120 --speed-limit 1024 \
       -o "$ROOT/data/raw/aqua_train.json" "$url"; then
       train_bytes=$(stat -c%s "$ROOT/data/raw/aqua_train.json")
       if [[ "$train_bytes" -ge 1000000 ]]; then
