@@ -62,3 +62,5 @@ python -m option_mismatch.eval_mcq --config configs/qwen25_0.5b_2080.yaml --adap
 ```
 
 Design notes: `docs/experiment_design.md`. Frozen numbers: `reports/stage_a/stage_a_h1.json`, `reports/stage_b/stage_b_repair.json`.
+
+Venue and experiment bar: `docs/submission_targets.md` (ACL 2027 and TNNLS; Stage B is not a submission table).

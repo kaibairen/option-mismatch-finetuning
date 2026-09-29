@@ -369,6 +369,8 @@ Base / SFT / DPO / Rep-DPO / Rep-GRPO：$\Delta\mathrm{NDI}$、Mismatch、Accura
 2. **不再扩大模型** 直到 Stage A 对照做完。  
 3. **下一步实现**：内容切分、行为指标、对照实验，然后用已有 100 条 train 做 0.5B Rep-DPO 可行性。
 
+2026-09-29 起，投稿级别和出门条件以 `docs/submission_targets.md` 为准。Stage A 的乱序对照未消掉漂移，Stage B 的错配上升，因此第 11 节第 2–3 条不再作为投稿计划。
+
 ---
 
 ## 12. Stage A / B 实测（V100）
