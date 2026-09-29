@@ -1,6 +1,50 @@
 # 投稿目标与实验门槛
 
-状态：2026-09-29 锁定。本文替换 `docs/experiment_design.md` 第 11 节里「先把 0.5B 跑通再谈投稿」的决策。历史数字仍以 `reports/` 为准，不改写。
+状态：2026-09-29 第二轮。会议与期刊按下面第 0 节锁定。历史数字仍以 `reports/` 为准。
+
+## 0. 这一轮锁定的两个出口
+
+材料仍读不到本地的 NLPCC `main.tex`。方法名按实验目标里的 DECORD 实现：Diligence-guided End Commitment for Option Representation Drift。训练无关的 DECORD 和微调方案 DECORD-FT 都必须在同一套 AQUA-RAT test 上，字母准确率至少高于 Base、SFT、标准 DPO 里最强的一个 **1 个百分点**。选择发生在 dev 上，test 只报一次。
+
+### 0.1 CCF 会议：NAACL 2027（CCF-B）
+
+依据是 [NAACL 2027 main conference CFP](https://2027.naacl.org/calls/main_conference_papers/) 和 [ARR dates](http://aclrollingreview.org/dates)。2026-08 的 CCF 截稿清单仍把 NAACL 标为 B。CCF 第七版不把 Findings、workshop、short paper 算进目录，所以目标是 main long paper。
+
+| 项 | 要求 |
+| --- | --- |
+| 投稿 | ARR 2026 年 10 月轮，截稿 **2026-10-12** 23:59 UTC-12。承诺 NAACL 的截止日期 **2026-12-23**。录用通知 2027-02-10。会议 2027-06-01 至 06-05，旧金山。 |
+| 篇幅 | 长文 8 页正文，参考文献和附录不限。录用后可加 1 页到 9 页。 |
+| 评审 | 双盲。先在 ARR 审，再承诺到 NAACL。与 COLING 2027 同一轮，一篇稿只能承诺一个主会。 |
+| 内容 | 必须是实质性的、未发表的 NLP 贡献。CFP 点名了 Interpretability and Analysis、Inference-Time Methods、Reasoning、Safety and Alignment，和 DECORD 同题。只报一个小模型上 +1 个点、没有对照和失败分析，过不了「substantial contribution」。 |
+| 必备部分 | Limitations 专节；和已有工作的直接比较；负责的 NLP 研究清单；不能一稿多投。 |
+| 不接受 | 在 NAACL 审稿期间同时投 TNNLS。期刊版必须等会议流程结束，并且相对会议稿有实质扩展。 |
+
+10 月 12 日之前如果 test 门禁还没过，这一轮不投 NAACL。稿仍按这 8 页长文的结构写，以免为了赶上截稿把负结果送审。
+
+### 0.2 IEEE 期刊：TNNLS（CCF-B，公开目录中的 JCR Q1 / 2025 中科院计算机科学 1 区 TOP）
+
+依据是 [IEEE CIS TNNLS Information for Authors](https://cis.ieee.org/publications/t-neural-networks-and-learning-systems/tnnls)。不选 KBS：KBS 不是 IEEE，而且在 CCF 目录里通常是 C 类。TNNLS 同时满足「IEEE」和「CCF-B」。投稿前用学校账号打开的 2025 分区表再核一次大类分区。
+
+| 项 | 要求 |
+| --- | --- |
+| 范围 | 神经网络与学习系统的理论、设计或应用。全文要有可归档的新贡献，审稿人会拒增量式改进。 |
+| 体裁 | Full Paper。双盲，至少两位审稿人。IEEE 双栏。摘要必须包含主要结果。4–5 个关键词。 |
+| 篇幅 | 建议不超过 10 个印刷页。超过 10 页有强制超页费，绝对上限 15 页（不含补充材料）。 |
+| 独占性 | 不能同时在别处审。已经发表的会议稿必须先做实质扩展才能投。 |
+| 复现 | 算法、损失、基线、数据划分、种子要能让别人重跑。AI 生成的文字要在致谢里披露并引用系统。 |
+| 作者 | 每位作者需要 ORCID。 |
+
+和 NAACL 共用的内容门槛：问题定义、DECORD 与 DECORD-FT 的公式、Base / SFT / 带参考模型的 DPO 对照、dev 上选定的超参、test 上的准确率和错配率、去掉字母间隔项和 \(\alpha=0\) 的消融、局限（单模型尺度、单一数据集、+1 个百分点的统计不确定性）。
+
+### 0.3 实验计划
+
+1. 训练无关 **DECORD**：贪心生成后，在 `Final answer:` 边界上对 A–E 取下一个 token 的对数概率，再加上或减去 \(\alpha\)，奖罚「与 Phase II 数值所对应字母是否一致」。\(\alpha\in\{0,0.5,1,2,4\}\) 在 dev 上选，\(\alpha=0\) 是纯概率消融。
+2. **SFT**：同一训练题上的均匀 token NLL。这是对照，不是我们的方法。
+3. **DPO**：从该 SFT 初始化，冻结参考模型就是这个 SFT，偏好对的 chosen 是金标准解答，rejected 是 SFT 自己生成的错误收尾。损失是标准 DPO，含 \(\log\pi_{\mathrm{ref}}\)。
+4. **DECORD-FT**：答案行 4 倍权重的 SFT，加上 gold 字母相对其他字母的 logit 间隔；再用同一批偏好对做带间隔项的 DPO。dev 上在 DECORD-SFT 和 DECORD-DPO 之间选一个作为微调方案，test 只评被选中的那个。
+5. 机器是 RTX 2080 Ti 11GB。模型用 Qwen2.5-0.5B-Instruct，权重放在 `/root/autodl-tmp`。先跑 16 条 smoke，再跑 train 400、dev 60、AQUA test 全量。
+
+出门条件写在 `scripts/experiments/decord_gate.py`：`decord_beats` 和 `decord_ft_beats` 同时为真才算这一轮完成。做不到就改 \(\alpha\) 的用法、采样条数或损失权重后再跑，不改 test 划分。
 
 材料边界：本环境读不到 `/Users/yaosiyi/Downloads/NLPCC/main.tex`。下面的论文诊断依据是仓库里的实验设计、协议实现和 V100 冻结结果。若 tex 里还有仓库没有的主张，那些主张尚未被这些数字支撑。
 
