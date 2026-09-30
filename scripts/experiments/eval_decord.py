@@ -9,8 +9,8 @@ from peft import PeftModel
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM
 
-from option_mismatch.behavior import analyze_behavior, extract_numbers, infer_letter_from_numbers, summarize_behavior
-from option_mismatch.decord import commit_letter, commitment_source_text, letter_logprobs, majority_letter, phase2_prefix
+from option_mismatch.behavior import analyze_behavior, extract_letter, extract_numbers, infer_letter_from_numbers, summarize_behavior
+from option_mismatch.decord import argmax_letter, commit_letter, commitment_source_text, letter_logprobs, majority_letter, phase2_prefix
 from option_mismatch.io_utils import read_jsonl, write_json
 from option_mismatch.model_runtime import apply_chat, load_tokenizer
 from option_mismatch.probe import generate_solution
@@ -67,10 +67,22 @@ def letters_for_generation(model, tokenizer, prompt: str, generation: str, optio
     }
 
 
-def score_split(model, tokenizer, rows: list[dict], max_new_tokens: int, decord_samples: int) -> dict:
+def recommit_letter(model, tokenizer, prompt: str, generation: str, options: list[str]) -> str:
+    """Read the letter from a short continuation after a forced answer boundary."""
+    body = commitment_source_text(generation, options).rstrip()
+    prefix = f"{prompt}{body}\nFinal answer:"
+    continuation = generate_solution(model, tokenizer, prefix, 16)
+    letter = extract_letter(prefix + continuation)
+    if letter:
+        return letter
+    return argmax_letter(letter_logprobs(model, tokenizer, prefix))
+
+
+def score_split(model, tokenizer, rows: list[dict], max_new_tokens: int, decord_samples: int, recommit: bool) -> dict:
     greedy_rows = []
     by_alpha = {str(alpha): [] for alpha in ALPHAS}
     by_full = {str(alpha): [] for alpha in ALPHAS}
+    recommit_rows = []
     majority = {str(alpha): [] for alpha in ALPHAS}
     examples = []
     for row in tqdm(rows, desc="eval"):
@@ -82,6 +94,16 @@ def score_split(model, tokenizer, rows: list[dict], max_new_tokens: int, decord_
             generations.append(sample_solution(model, tokenizer, prompt, max_new_tokens))
         scored = [letters_for_generation(model, tokenizer, prompt, text, options, gold) for text in generations]
         behavior = scored[0]["behavior"]
+        if recommit:
+            recommit_choice = recommit_letter(model, tokenizer, prompt, generations[0], options)
+            recommit_rows.append(
+                {
+                    "letter_correct": recommit_choice == gold and bool(recommit_choice),
+                    "mismatch": False,
+                    "format_ok": True,
+                    "number_match": bool(behavior.get("number_match")),
+                }
+            )
         greedy_rows.append(behavior)
         per_alpha = {str(alpha): [] for alpha in ALPHAS}
         per_full = {str(alpha): [] for alpha in ALPHAS}
@@ -136,6 +158,8 @@ def score_split(model, tokenizer, rows: list[dict], max_new_tokens: int, decord_
         "decord_fullnum": {alpha: summarize_behavior(rows_alpha) for alpha, rows_alpha in by_full.items()},
         "examples": examples,
     }
+    if recommit_rows:
+        report["recommit"] = summarize_behavior(recommit_rows)
     if decord_samples > 1:
         report["decord_majority"] = {alpha: summarize_behavior(rows_alpha) for alpha, rows_alpha in majority.items()}
     return report
@@ -149,12 +173,13 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--max-new-tokens", type=int, default=160)
     parser.add_argument("--decord-samples", type=int, default=1)
+    parser.add_argument("--recommit", action="store_true")
     parser.add_argument("--output-json", required=True)
     args = parser.parse_args()
     rows = read_jsonl(args.test_jsonl, limit=args.limit)
     tokenizer = load_tokenizer(args.model_dir)
     model = load_model(args.model_dir, args.adapter)
-    report = score_split(model, tokenizer, rows, args.max_new_tokens, args.decord_samples)
+    report = score_split(model, tokenizer, rows, args.max_new_tokens, args.decord_samples, args.recommit)
     report["adapter"] = args.adapter or "base"
     report["test_jsonl"] = args.test_jsonl
     write_json(args.output_json, report)
@@ -163,6 +188,8 @@ def main() -> None:
         "decord": {k: v["accuracy"] for k, v in report["decord"].items()},
         "decord_fullnum": {k: v["accuracy"] for k, v in report["decord_fullnum"].items()},
     }
+    if "recommit" in report:
+        summary["recommit"] = report["recommit"]["accuracy"]
     if "decord_majority" in report:
         summary["decord_majority"] = {k: v["accuracy"] for k, v in report["decord_majority"].items()}
     print(summary, flush=True)
