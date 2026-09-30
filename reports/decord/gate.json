@@ -1,0 +1,24 @@
+{
+  "alpha": "2.0",
+  "decord_kind": "decord",
+  "fine_tuned_variant": "decord_sft",
+  "margin": 0.01,
+  "test_accuracy": {
+    "base": 0.16929133858267717,
+    "sft": 0.2637795275590551,
+    "dpo": 0.1968503937007874,
+    "decord": 0.27165354330708663,
+    "decord_ft": 0.31496062992125984
+  },
+  "bar": 0.2737795275590551,
+  "decord_beats": false,
+  "decord_ft_beats": true,
+  "goal_met": false,
+  "mismatch": {
+    "base": 0.14566929133858267,
+    "sft": 0.12598425196850394,
+    "dpo": 0.08661417322834646,
+    "decord": 0.027559055118110236,
+    "decord_ft": 0.09448818897637795
+  }
+}
