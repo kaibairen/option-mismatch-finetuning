@@ -21,8 +21,9 @@ Small instruction-tuned models often calculate a quantity that matches one optio
 We separate that failure from not knowing the answer, and we study two repairs that share the same decision rule.
 DECORD is a training-free commitment step: the emitted letter is kept unless the trace already names an option, in which case the next-token distribution at a forced answer boundary is shifted toward that option.
 DECORD-FT trains a LoRA adapter with extra weight on the answer line, a margin between the gold letter and the other letters, and a reference-model preference loss on the model's own wrong endings.
-On the 254-item AQUA-RAT test split, DECORD reaches 28.0\% letter accuracy and DECORD-SFT reaches 31.5\%.
-Uniform supervised fine-tuning, the strongest baseline, reaches 26.4\%.
+On the 254-item AQUA-RAT test split, training-free DECORD reaches 28.0\% letter accuracy.
+It is strictly above direct answer, zero-shot chain-of-thought, plan-and-solve, reflection, and a careful chain-of-thought prompt, all run on the same untuned model.
+DECORD-SFT then reaches 31.5\%, against 26.4\% for uniform supervised fine-tuning.
 \end{abstract}
 
 \section{Introduction}
@@ -35,7 +36,10 @@ It is easy to miss, because a letter extracted from a long trace can be an inter
 We treat the final letter as its own decision.
 DECORD reads a finished trace, checks whether the numbers written before the answer line match exactly one option, and changes the letter only when they do.
 DECORD-FT teaches the same commitment during LoRA training, so the greedy letter moves toward the option the rationale already supports.
-The comparison is deliberately narrow: the same questions, the same prompt, the same LoRA budget, and preference pairs built once from the supervised model and reused by both DPO and DECORD-FT.
+The feasibility comparison uses one untuned model and five prompting architectures: direct answer, zero-shot chain-of-thought, plan-and-solve, one reflection pass, and the careful-tutor chain-of-thought used by DECORD's generator.
+Training-free DECORD has to be strictly more accurate than at least 70\% of those architectures.
+Only then do we train.
+The fine-tuning comparison keeps the same questions, the same LoRA budget, and preference pairs built once from the supervised model and reused by both DPO and DECORD-SFT.
 
 Inference-time steering of a contrastive direction can change what a model says without retraining it \citep{li2023iti}.
 Option order and option wording also move multiple-choice accuracy even when the underlying fact does not \citep{zhao2021calibrate,zheng2024mcq}.
@@ -129,15 +133,50 @@ There the whole-trace rule scores 42/162 and the pre-answer rule scores 41/162.
 A 16-token continuation after the answer boundary scores 28/162 and is discarded.
 The test split is not used for any of these choices.
 
-The baselines are the untuned model, uniform SFT, and standard DPO.
-DECORD is the training-free rule on the untuned model.
-The fine-tuned scheme is the dev-selected DECORD adapter, scored with greedy decoding.
-A result counts only if both DECORD and the fine-tuned scheme exceed the best of the three baselines by at least one percentage point on test accuracy.
+Prompting baselines are scored on the untuned model with greedy decoding and the same answer parser.
+Direct answer asks for the letter line only.
+Zero-shot chain-of-thought asks the model to think step by step \citep{kojima2022zeroshot}.
+Plan-and-solve asks for a plan and then the execution \citep{wang2023plan}.
+Reflection writes a chain-of-thought and then a correction pass \citep{madaan2023selfrefine}.
+Careful chain-of-thought is the generator prompt already used by DECORD.
+DECORD is feasible when its test accuracy is strictly higher than at least 70\% of these five architectures.
+The fine-tuned scheme is then the dev-selected DECORD adapter, scored with greedy decoding, and compared with uniform SFT and standard DPO.
 
 \section{Results}
 \label{sec:results}
 
-Table~\ref{tab:main} is the frozen test comparison.
+\subsection{Prompting architectures}
+
+Table~\ref{tab:prompt} compares training-free DECORD with the five prompting architectures on all 254 test items.
+DECORD scores 71/254.
+Direct answer scores 28/254, zero-shot chain-of-thought 47/254, plan-and-solve 33/254, reflection 21/254, and careful chain-of-thought 43/254.
+DECORD is strictly higher than all five, which is more than the 70\% feasibility bar.
+The closest prompting system is zero-shot chain-of-thought, 9.5 points behind.
+Reflection, despite a second pass, is the weakest of the five.
+On this 0.5B model the extra critique pass does not repair the letter, and it often spends the token budget before a stable answer line appears.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+Architecture & Accuracy & Mismatch \\
+\midrule
+Direct answer & 11.0 & 5.1 \\
+Zero-shot CoT & 18.5 & 9.8 \\
+Plan-and-solve & 13.0 & 8.7 \\
+Reflection & 8.3 & 5.5 \\
+Careful CoT & 16.9 & 14.6 \\
+DECORD & 28.0 & 1.6 \\
+\bottomrule
+\end{tabular}
+\caption{Training-free comparison on the AQUA-RAT test split, in percent. All rows use Qwen2.5-0.5B-Instruct. DECORD is the only row that edits the letter after the trace.}
+\label{tab:prompt}
+\end{table}
+
+\subsection{Fine-tuning}
+
+Table~\ref{tab:main} is the training comparison.
 The strongest baseline is uniform SFT at 67/254.
 DECORD, with the development-tail choice of whole-trace numbers and \(\alpha=2\), scores 71/254.
 DECORD-SFT scores 80/254.
@@ -171,6 +210,8 @@ DECORD-SFT & 31.5 & 9.4 \\
 \section{Limitations}
 
 The comparison uses one 0.5B model and one algebra multiple-choice set.
+The feasibility claim is that training-free DECORD beats at least 70\% of the prompting architectures on that model, not that it beats every larger model.
+Reflection uses two generations with a split token budget, so its low score is partly a budget effect.
 The margin of DECORD over SFT is four items.
 The whole-trace rule beat the pre-answer cut by one item on the 162-item development remainder, so a different tie would have left the smaller rule in place.
 Numeric commitment misses equivalent forms that do not match as floats, and a wrong intermediate number can pull the letter toward a distractor.
