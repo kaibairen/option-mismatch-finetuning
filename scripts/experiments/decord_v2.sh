@@ -21,7 +21,7 @@ python scripts/experiments/select_commitment.py \
   --dev-json "$OUT/dev_base_v2.json" \
   --output-json "$OUT/commitment_choice.json"
 
-rule=$(/root/miniconda3/bin/python -c 'import json; print(json.load(open("'"$OUT"'/commitment_choice.json"))["rule"])')
+rule=$(/root/miniconda3/bin/python -c 'import json; print(json.load(open("/root/autodl-tmp/option-mismatch-finetuning/results/decord/commitment_choice.json"))["rule"])')
 echo "[choice] $rule"
 if [[ "$rule" != "fullnum" ]]; then
   echo "[stop] full-trace numbers did not beat the phase-2 rule on dev"
