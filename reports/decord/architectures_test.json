@@ -1,0 +1,42 @@
+{
+  "n": 254,
+  "architectures": {
+    "direct": {
+      "n": 254,
+      "accuracy": 0.11023622047244094,
+      "mismatch_rate": 0.051181102362204724,
+      "number_match_rate": 0.047244094488188976,
+      "format_rate": 0.421259842519685
+    },
+    "cot": {
+      "n": 254,
+      "accuracy": 0.18503937007874016,
+      "mismatch_rate": 0.0984251968503937,
+      "number_match_rate": 0.12598425196850394,
+      "format_rate": 0.03543307086614173
+    },
+    "plan": {
+      "n": 254,
+      "accuracy": 0.12992125984251968,
+      "mismatch_rate": 0.08661417322834646,
+      "number_match_rate": 0.08661417322834646,
+      "format_rate": 0.007874015748031496
+    },
+    "reflect": {
+      "n": 254,
+      "accuracy": 0.08267716535433071,
+      "mismatch_rate": 0.05511811023622047,
+      "number_match_rate": 0.09448818897637795,
+      "format_rate": 0.023622047244094488
+    }
+  },
+  "careful_cot": {
+    "n": 254,
+    "accuracy": 0.16929133858267717,
+    "mismatch_rate": 0.14566929133858267
+  },
+  "decord": {
+    "n": 254,
+    "accuracy": 0.2795275590551181
+  }
+}
