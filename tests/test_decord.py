@@ -30,6 +30,13 @@ def test_majority_letter_breaks_ties_by_letter_order():
     assert majority_letter(["C", "A", "A", "C"]) == "A"
 
 
+def test_unmarked_trace_keeps_its_ending_for_commitment():
+    from option_mismatch.decord import commitment_source_text
+
+    text = "Compute slowly and reach 125 at the end."
+    assert commitment_source_text(text, ["A)125", "B)1"]) == text
+
+
 def test_phase2_prefix_stops_at_final_answer():
     text = "Total is 125.\nFinal answer: C"
     assert phase2_prefix(text, ["A)125", "B)1"]).endswith("125.")

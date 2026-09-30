@@ -9,8 +9,8 @@ from peft import PeftModel
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM
 
-from option_mismatch.behavior import analyze_behavior, summarize_behavior
-from option_mismatch.decord import commit_letter, letter_logprobs, majority_letter, phase2_prefix
+from option_mismatch.behavior import analyze_behavior, extract_numbers, infer_letter_from_numbers, summarize_behavior
+from option_mismatch.decord import commit_letter, commitment_source_text, letter_logprobs, majority_letter, phase2_prefix
 from option_mismatch.io_utils import read_jsonl, write_json
 from option_mismatch.model_runtime import apply_chat, load_tokenizer
 from option_mismatch.probe import generate_solution
@@ -55,13 +55,22 @@ def letters_for_generation(model, tokenizer, prompt: str, generation: str, optio
     logprobs = letter_logprobs(model, tokenizer, prefix)
     inferred = behavior.get("inferred_letter") or ""
     pred = behavior.get("pred") or ""
+    full_inferred = infer_letter_from_numbers(extract_numbers(commitment_source_text(generation, options)), options)
     chosen = {str(alpha): commit_letter(logprobs, inferred, pred, alpha) for alpha in ALPHAS}
-    return {"behavior": behavior, "chosen": chosen, "generation": generation}
+    chosen_full = {str(alpha): commit_letter(logprobs, full_inferred, pred, alpha) for alpha in ALPHAS}
+    return {
+        "behavior": behavior,
+        "chosen": chosen,
+        "chosen_full": chosen_full,
+        "generation": generation,
+        "full_inferred": full_inferred,
+    }
 
 
 def score_split(model, tokenizer, rows: list[dict], max_new_tokens: int, decord_samples: int) -> dict:
     greedy_rows = []
     by_alpha = {str(alpha): [] for alpha in ALPHAS}
+    by_full = {str(alpha): [] for alpha in ALPHAS}
     majority = {str(alpha): [] for alpha in ALPHAS}
     examples = []
     for row in tqdm(rows, desc="eval"):
@@ -75,9 +84,12 @@ def score_split(model, tokenizer, rows: list[dict], max_new_tokens: int, decord_
         behavior = scored[0]["behavior"]
         greedy_rows.append(behavior)
         per_alpha = {str(alpha): [] for alpha in ALPHAS}
+        per_full = {str(alpha): [] for alpha in ALPHAS}
         for item in scored:
             for alpha, letter in item["chosen"].items():
                 per_alpha[alpha].append(letter)
+            for alpha, letter in item["chosen_full"].items():
+                per_full[alpha].append(letter)
         decord_letters = {}
         for alpha, letters in per_alpha.items():
             letter = letters[0]
@@ -87,6 +99,14 @@ def score_split(model, tokenizer, rows: list[dict], max_new_tokens: int, decord_
                 {
                     "letter_correct": letter == gold and bool(letter),
                     "mismatch": bool(behavior.get("inferred_letter")) and bool(letter) and behavior["inferred_letter"] != letter,
+                    "format_ok": bool(behavior.get("format_ok")),
+                    "number_match": bool(behavior.get("number_match")),
+                }
+            )
+            by_full[alpha].append(
+                {
+                    "letter_correct": per_full[alpha][0] == gold and bool(per_full[alpha][0]),
+                    "mismatch": bool(scored[0].get("full_inferred")) and per_full[alpha][0] != scored[0]["full_inferred"],
                     "format_ok": bool(behavior.get("format_ok")),
                     "number_match": bool(behavior.get("number_match")),
                 }
@@ -113,6 +133,7 @@ def score_split(model, tokenizer, rows: list[dict], max_new_tokens: int, decord_
         "n": len(rows),
         "greedy": summarize_behavior(greedy_rows),
         "decord": {alpha: summarize_behavior(rows_alpha) for alpha, rows_alpha in by_alpha.items()},
+        "decord_fullnum": {alpha: summarize_behavior(rows_alpha) for alpha, rows_alpha in by_full.items()},
         "examples": examples,
     }
     if decord_samples > 1:
@@ -137,7 +158,11 @@ def main() -> None:
     report["adapter"] = args.adapter or "base"
     report["test_jsonl"] = args.test_jsonl
     write_json(args.output_json, report)
-    summary = {"greedy": report["greedy"], "decord": {k: v["accuracy"] for k, v in report["decord"].items()}}
+    summary = {
+        "greedy": report["greedy"]["accuracy"],
+        "decord": {k: v["accuracy"] for k, v in report["decord"].items()},
+        "decord_fullnum": {k: v["accuracy"] for k, v in report["decord_fullnum"].items()},
+    }
     if "decord_majority" in report:
         summary["decord_majority"] = {k: v["accuracy"] for k, v in report["decord_majority"].items()}
     print(summary, flush=True)

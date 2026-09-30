@@ -41,6 +41,18 @@ def argmax_letter(scores: Mapping[str, float]) -> str:
     return max(scores, key=lambda letter: (scores[letter], letter))
 
 
+def commitment_source_text(generation: str, options: list[str] | None = None) -> str:
+    """Text whose numbers may name an option.
+
+    A marked answer line is excluded. A trace with no answer line keeps its
+    ending, instead of dropping the last 30 percent.
+    """
+    start, rule = resolve_phase3_char_start(generation, list(options) if options is not None else None)
+    if rule == "not_found":
+        return generation
+    return generation[:start]
+
+
 def phase2_prefix(generation: str, options: list[str] | None = None) -> str:
     start, rule = resolve_phase3_char_start(generation, options)
     if rule == "not_found":
