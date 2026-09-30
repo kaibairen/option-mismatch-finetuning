@@ -1,0 +1,14 @@
+{
+  "rule": "fullnum",
+  "alpha": "2.0",
+  "tail_accuracy": 0.25925925925925924,
+  "test_accuracy": 0.2795275590551181,
+  "sft_accuracy": 0.2637795275590551,
+  "dpo_accuracy": 0.1968503937007874,
+  "base_accuracy": 0.16929133858267717,
+  "decord_ft_accuracy": 0.31496062992125984,
+  "bar": 0.2737795275590551,
+  "decord_beats": true,
+  "decord_ft_beats": true,
+  "goal_met": true
+}

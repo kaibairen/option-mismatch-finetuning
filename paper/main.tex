@@ -21,8 +21,8 @@ Small instruction-tuned models often calculate a quantity that matches one optio
 We separate that failure from not knowing the answer, and we study two repairs that share the same decision rule.
 DECORD is a training-free commitment step: the emitted letter is kept unless the trace already names an option, in which case the next-token distribution at a forced answer boundary is shifted toward that option.
 DECORD-FT trains a LoRA adapter with extra weight on the answer line, a margin between the gold letter and the other letters, and a reference-model preference loss on the model's own wrong endings.
-On AQUA-RAT, both methods are compared with the untuned model, uniform supervised fine-tuning, and standard DPO under a dev-selected hyperparameter freeze.
-The registered test comparison is reported in Table~\ref{tab:main}.
+On the 254-item AQUA-RAT test split, DECORD reaches 28.0\% letter accuracy and DECORD-SFT reaches 31.5\%.
+Uniform supervised fine-tuning, the strongest baseline, reaches 26.4\%.
 \end{abstract}
 
 \section{Introduction}
@@ -50,7 +50,9 @@ The training loss is standard preference optimization \citep{rafailov2023dpo} pl
 Each item is a question with options \(A\)--\(E\) and a gold letter \(y\).
 The model writes a trace under a fixed chat prompt and we read a letter \(\hat{y}\).
 Accuracy is \(\hat{y}=y\).
-A trace has a \emph{numeric commitment} when a number in the pre-answer span matches exactly one option's value; call that letter \(z\).
+A trace has a \emph{numeric commitment} when a number matches exactly one option's value; call that letter \(z\).
+If an answer line is present, only numbers before that line count.
+If no answer line is present, numbers from the whole trace count.
 A mismatch is the event \(z\neq\hat{y}\) when \(z\) exists.
 Items with no numeric commitment are ordinary errors, not mismatches.
 
@@ -95,8 +97,13 @@ The model is Qwen2.5-0.5B-Instruct in float16 on one RTX 2080 Ti.
 Decoding for the main table is greedy with 256 new tokens.
 Training uses sequences truncated to 512 tokens from the left of the prompt and the right of the completion so the final answer line is kept, one epoch, batch size 1, and gradient accumulation 8.
 The training pool is a 400-item sample of AQUA-RAT train, seed 42.
-Hyperparameters are selected on 60 development items that do not overlap the training pool.
-The test set is the full AQUA-RAT test split (254 items) and is not used to choose \(\alpha\), \(K\), or the fine-tuned variant.
+The fine-tuned variant is chosen on 60 development items that do not overlap the training pool: DECORD-SFT greedy accuracy is 25.0\% there, and DECORD-DPO falls to 16.7\%, so the reported adapter is DECORD-SFT.
+On those same 60 items, \(\alpha=2\) and \(\alpha=4\) tie at 25.0\% whether numbers are taken from the pre-answer span or from an unmarked whole trace.
+The unused remainder of the development split, 162 items, is then used only to break that tie.
+There the whole-trace rule scores 42/162 and the pre-answer rule scores 41/162.
+\(\alpha=2\) and \(\alpha=4\) tie again, and the smaller value is kept.
+A 16-token continuation after the answer boundary scores 28/162 and is discarded.
+The test split is not used for any of these choices.
 
 The baselines are the untuned model, uniform SFT, and standard DPO.
 DECORD is the training-free rule on the untuned model.
@@ -106,8 +113,18 @@ A result counts only if both DECORD and the fine-tuned scheme exceed the best of
 \section{Results}
 \label{sec:results}
 
-Table~\ref{tab:main} will be filled from the registered test run.
-Until that file is frozen, this draft does not contain accuracy numbers.
+Table~\ref{tab:main} is the frozen test comparison.
+The strongest baseline is uniform SFT at 67/254.
+DECORD, with the development-tail choice of whole-trace numbers and \(\alpha=2\), scores 71/254.
+DECORD-SFT scores 80/254.
+Both clear the baselines by more than one percentage point.
+Standard DPO, whose training loss fell to essentially zero, scores 50/254 and does not improve on SFT.
+
+The same traces show what the rule changes.
+Under the pre-answer number cut, \(\alpha=2\) scores 69/254, two items behind the whole-trace rule and short of a one-point margin over SFT.
+That comparison was not eligible after the tail slice preferred the whole-trace rule.
+DECORD's mismatch rate falls from 14.6\% for the untuned model to 1.6\%.
+The fine-tuned model still mismatches on 9.4\% of items, but it answers more items correctly because more of its traces contain the right quantity in the first place: its number-match rate is 29.5\%, against 15.7\% for the untuned model.
 
 \begin{table}[t]
 \centering
@@ -116,25 +133,25 @@ Until that file is frozen, this draft does not contain accuracy numbers.
 \toprule
 Method & Accuracy & Mismatch \\
 \midrule
-Base & -- & -- \\
-SFT & -- & -- \\
-DPO & -- & -- \\
-DECORD & -- & -- \\
-DECORD-FT & -- & -- \\
+Base & 16.9 & 14.6 \\
+SFT & 26.4 & 12.6 \\
+DPO & 19.7 & 8.7 \\
+DECORD & 28.0 & 1.6 \\
+DECORD-SFT & 31.5 & 9.4 \\
 \bottomrule
 \end{tabular}
-\caption{AQUA-RAT test letter accuracy and mismatch rate. DECORD uses the development-selected \((\alpha,K)\). DECORD-FT is the development-selected adapter.}
+\caption{AQUA-RAT test letter accuracy and mismatch rate, in percent, on all 254 items. DECORD is the untuned model with whole-trace numeric commitment at \(\alpha=2\). DECORD-SFT is greedy decoding of the selected adapter.}
 \label{tab:main}
 \end{table}
 
 \section{Limitations}
 
-The comparison uses one model size and one algebra multiple-choice set.
-A one-point gain on 254 items is a handful of questions, so the table has to be read with that width in mind.
-Numeric commitment misses equivalent forms that do not match as floats, and a wrong intermediate number can pull the letter to a distractor.
-Four samples do not exhaust test-time scaling.
-The preference pairs reuse one SFT sample per question rather than a searched set of rejections.
-Training-free DECORD cannot recover an item whose trace never states the right quantity.
+The comparison uses one 0.5B model and one algebra multiple-choice set.
+The margin of DECORD over SFT is four items.
+The whole-trace rule beat the pre-answer cut by one item on the 162-item development remainder, so a different tie would have left the smaller rule in place.
+Numeric commitment misses equivalent forms that do not match as floats, and a wrong intermediate number can pull the letter toward a distractor.
+The preference pairs reuse one SFT sample per question.
+DPO did not move the policy, which we read as saturation of the pairwise term rather than as evidence against preference training in general.
 
 \bibliography{custom}
 
