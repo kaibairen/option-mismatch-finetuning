@@ -91,6 +91,30 @@ DECORD-DPO starts from DECORD-SFT, uses the same pairs and the same reference pr
 Development accuracy chooses whether the fine-tuned system is DECORD-SFT or DECORD-DPO.
 That choice is frozen before the test split is scored.
 
+\section{Architecture}
+
+DECORD does not replace the reasoning trace.
+Chain-of-thought \citep{wei2022cot,kojima2022zeroshot}, plan-and-solve \citep{wang2023plan}, and reflection \citep{madaan2023selfrefine} change the text the model is asked to write.
+DECORD reads a finished trace and edits only the final letter.
+
+The pipeline has four steps.
+First, a generator produces a trace.
+In the main comparison that generator is greedy decoding under a careful-tutor prompt.
+The prompting baselines instead use direct answer, zero-shot chain-of-thought, plan-and-solve, or one reflection pass, each on the same untuned model.
+Second, the trace is scanned for a numeric commitment \(z\).
+Numbers written before an answer line are eligible.
+If the trace never marks an answer line, numbers from the whole trace are eligible.
+Third, the model scores the five letters as the next token after a forced \texttt{Final answer:} boundary.
+Fourth, those scores are shifted by \(\alpha\) toward \(z\), and the letter is the argmax.
+When \(z\) is empty, the letter already present in the trace is kept.
+
+This order is the feasibility claim.
+The training-free rule has to be a bit stronger than most standard prompting architectures on the same model before a gradient update is justified.
+We count a prompting architecture as beaten only when DECORD's test accuracy is strictly higher.
+The rule is feasible when it beats at least 70\% of those architectures.
+Fine-tuning is the next stage, not a substitute for that comparison.
+DECORD-SFT then teaches the same commitment inside LoRA, and it is compared with uniform SFT and standard DPO under a matched training budget.
+
 \section{Experimental setup}
 
 The model is Qwen2.5-0.5B-Instruct in float16 on one RTX 2080 Ti.
